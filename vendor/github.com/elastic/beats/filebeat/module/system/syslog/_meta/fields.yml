@@ -1,0 +1,20 @@
+- name: syslog
+  type: group
+  description: >
+    Contains fields from the syslog system logs.
+  fields:
+    - name: timestamp
+      type: alias
+      path: '@timestamp'
+    - name: hostname
+      type: alias
+      path: host.hostname
+    - name: program
+      type: alias
+      path: process.name
+    - name: pid
+      type: alias
+      path: process.pid
+    - name: message
+      type: alias
+      path: message
