@@ -3,7 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/elastic/beats/libbeat/beat"
+	"github.com/stefan-caraiman/consulbeat/cmd"
+
+	_ "github.com/stefan-caraiman/consulbeat/include"
 )
 
 func main() {
