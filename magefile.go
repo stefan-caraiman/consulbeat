@@ -33,7 +33,7 @@ import (
 func init() {
 	mage.SetBuildVariableSources(mage.DefaultBeatBuildVariableSources)
 
-	mage.BeatDescription = "One sentence description of the Beat."
+	mage.BeatDescription = "ConsulBeat exports Consul service and node health checks"
 }
 
 // Build builds the Beat binary.
