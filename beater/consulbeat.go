@@ -51,6 +51,9 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 	}
 
 	ticker := time.NewTicker(bt.config.Period)
+	health := consulClient.Health()
+	agent :=  consulClient.Agent()
+
 
 	for {
 		select {
@@ -59,7 +62,13 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 		case <-ticker.C:
 		}
 		// Get Node and Service checks
-		logp.Info(consulClient.Health())
+		info, _ := agent.Self()
+		// Use Catalog
+		name := info["Config"]["NodeName"].(string)
+		checks, meta, _ := health.Node(name, nil)
+		fmt.Println(checks[0].Node, checks[0].Name, checks[0].Status, checks[0].Output)
+		//logp.Info(string(checks))
+		logp.Info(string(meta.LastIndex))
 		// Parse checks
 		event := beat.Event{
 			Timestamp: time.Now(),
