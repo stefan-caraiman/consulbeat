@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/consul/api"
+
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
@@ -34,7 +36,7 @@ func New(b *beat.Beat, cfg *common.Config) (beat.Beater, error) {
 
 // Run starts consulbeat.
 func (bt *Consulbeat) Run(b *beat.Beat) error {
-	logp.Info("consulbeat is running! Hit CTRL-C to stop it.")
+	logp.Info("Consulbeat is running! Hit CTRL-C to stop it.")
 
 	var err error
 	bt.client, err = b.Publisher.Connect()
@@ -42,25 +44,32 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 		return err
 	}
 
+	// Initialize Consul client
+	consulClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		return err
+	}
+
 	ticker := time.NewTicker(bt.config.Period)
-	counter := 1
+
 	for {
 		select {
 		case <-bt.done:
 			return nil
 		case <-ticker.C:
 		}
-
+		// Get Node and Service checks
+		logp.Info(consulClient.Health())
+		// Parse checks
 		event := beat.Event{
 			Timestamp: time.Now(),
 			Fields: common.MapStr{
 				"type":    b.Info.Name,
-				"counter": counter,
+				"counter": 1337,
 			},
 		}
 		bt.client.Publish(event)
 		logp.Info("Event sent")
-		counter++
 	}
 }
 
