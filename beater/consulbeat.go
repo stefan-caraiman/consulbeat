@@ -53,7 +53,7 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 	ticker := time.NewTicker(bt.config.Period)
 	health := consulClient.Health()
 	agent :=  consulClient.Agent()
-
+	catalog := consulClient.Catalog()
 
 	for {
 		select {
@@ -64,9 +64,33 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 		// Get Node and Service checks
 		info, _ := agent.Self()
 		// Use Catalog
+		nodes, meta, err := catalog.Nodes(nil)
+
+		fmt.Println("Nodes: ", nodes)
+		fmt.Println(nodes[0].Datacenter)
+		fmt.Println(nodes[0].Address)
+		fmt.Println(meta)
+		fmt.Println(err)
+		// services
+		services, meta_services, err := catalog.Services(nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if meta_services.LastIndex == 0 {
+			fmt.Printf("Bad: %v", meta_services)
+		}
+
+		if len(services) == 0 {
+			fmt.Printf("Bad: %v", services)
+		}
+		fmt.Println("Services: ", services)
 		name := info["Config"]["NodeName"].(string)
 		checks, meta, _ := health.Node(name, nil)
-		fmt.Println(checks[0].Node, checks[0].Name, checks[0].Status, checks[0].Output)
+		fmt.Println("Node checks: ", checks[0].Node)
+		fmt.Println("Name: ", checks[0].Name)
+		fmt.Println("Status check: ", checks[0].Status)
+		fmt.Println("Output: ", checks[0].Output)
 		//logp.Info(string(checks))
 		logp.Info(string(meta.LastIndex))
 		// Parse checks
