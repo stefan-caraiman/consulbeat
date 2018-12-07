@@ -2,6 +2,7 @@ package beater
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -52,7 +53,7 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 
 	ticker := time.NewTicker(bt.config.Period)
 	health := consulClient.Health()
-	agent :=  consulClient.Agent()
+	//agent :=  consulClient.Agent()
 	catalog := consulClient.Catalog()
 
 	for {
@@ -62,19 +63,29 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 		case <-ticker.C:
 		}
 		// Get Node and Service checks
-		info, _ := agent.Self()
 		// Use Catalog
-		nodes, meta, err := catalog.Nodes(nil)
+		// nodes, meta, err := catalog.Nodes(nil)
+		// if err != nil {
+		// 	panic(err)
+		// }
 
-		fmt.Println("Nodes: ", nodes)
-		fmt.Println(nodes[0].Datacenter)
-		fmt.Println(nodes[0].Address)
-		fmt.Println(meta)
-		fmt.Println(err)
+		// if meta.LastIndex == 0 {
+		// 	fmt.Printf("Bad: %v", meta)
+		// }
+
+		// if len(nodes) == 0 {
+		// 	fmt.Printf("Bad: %v", nodes)
+		// }
+		// fmt.Println("Nodes: ", nodes)
+		// for key, value := range nodes {
+		// 	fmt.Printf("Key[%s] value [%s] \n", key, value)
+		// }
+		// fmt.Println(nodes[0].Datacenter)
+		// fmt.Println(nodes[0].Address)
 		// services
 		services, meta_services, err := catalog.Services(nil)
 		if err != nil {
-			fmt.Println(err)
+			panic(err)
 		}
 
 		if meta_services.LastIndex == 0 {
@@ -84,25 +95,64 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 		if len(services) == 0 {
 			fmt.Printf("Bad: %v", services)
 		}
-		fmt.Println("Services: ", services)
-		name := info["Config"]["NodeName"].(string)
-		checks, meta, _ := health.Node(name, nil)
-		fmt.Println("Node checks: ", checks[0].Node)
-		fmt.Println("Name: ", checks[0].Name)
-		fmt.Println("Status check: ", checks[0].Status)
-		fmt.Println("Output: ", checks[0].Output)
-		//logp.Info(string(checks))
-		logp.Info(string(meta.LastIndex))
-		// Parse checks
-		event := beat.Event{
-			Timestamp: time.Now(),
-			Fields: common.MapStr{
-				"type":    b.Info.Name,
-				"counter": 1337,
-			},
+
+		var events = []beat.Event{}
+		for service, _ := range services {
+			checks, meta, err := health.Service(service, "", false, nil)
+			catalog_check, _, _ := catalog.Service(service, "", nil)
+			if err != nil {
+				panic(err)
+			}
+
+			if meta.LastIndex == 0 {
+				fmt.Printf("Bad: %v", meta)
+			}
+
+			if len(checks) == 0 {
+				fmt.Printf("Bad: %v", checks)
+			}
+			fmt.Println("Service name is: ", service)
+			fmt.Println("Node status: ", checks[0].Node)
+			for _, check_value := range checks {
+				for _, health_check_def := range check_value.Checks {
+					// Marshal back to a map
+					event := beat.Event{
+						Timestamp: time.Now(),
+						Fields: common.MapStr{
+							"type": "service", // REFACTOR
+							"ok": catalog_check[0].ServiceAddress,
+							"node": check_value.Node.Node,
+							"Datacenter": check_value.Node.Datacenter,
+							"AgentAddress": check_value.Node.Address,
+							"Port": check_value.Service.Port,
+							"Service": check_value.Service.Service,
+							"CheckID": health_check_def.CheckID,
+							"CheckName": health_check_def.Name,
+							"Status": health_check_def.Status,
+							"Output": health_check_def.Output,
+							"ServiceID": health_check_def.ServiceID,
+							"ServiceName": health_check_def.ServiceName,
+							"ServiceTags": strings.Join(health_check_def.ServiceTags, ","),
+						},
+					}
+					events = append(events, event)
+				}
+			}
 		}
-		bt.client.Publish(event)
-		logp.Info("Event sent")
+
+		// Testing node checks
+		//info, _ := agent.Self()
+		//name := info["Config"]["NodeName"].(string)
+		//checks, meta, _ := health.Node(name, nil)
+		// fmt.Println("Node checks: ", checks[0].Node)
+		// fmt.Println("Name: ", checks[0].Name)
+		// fmt.Println("Status check: ", checks[0].Status)
+		// fmt.Println("Output: ", checks[0].Output)
+		//logp.Info(string(checks))
+		//logp.Info(string(meta.LastIndex))
+		// Parse checks
+		bt.client.PublishAll(events)
+		logp.Info("Events sent")
 	}
 }
 
