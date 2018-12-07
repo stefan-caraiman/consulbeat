@@ -52,7 +52,7 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 	}
 
 	ticker := time.NewTicker(bt.config.Period)
-	health := consulClient.Health()
+	//health := consulClient.Health()
 	//agent :=  consulClient.Agent()
 	catalog := consulClient.Catalog()
 
@@ -98,8 +98,8 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 
 		var events = []beat.Event{}
 		for service, _ := range services {
-			checks, meta, err := health.Service(service, "", false, nil)
-			catalog_check, _, _ := catalog.Service(service, "", nil)
+			//catalog_check, meta, err := health.Service(service, "", false, nil)
+			checks, meta, err := catalog.Service(service, "", nil)
 			if err != nil {
 				panic(err)
 			}
@@ -111,46 +111,34 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 			if len(checks) == 0 {
 				fmt.Printf("Bad: %v", checks)
 			}
+
 			fmt.Println("Service name is: ", service)
 			fmt.Println("Node status: ", checks[0].Node)
 			for _, check_value := range checks {
-				for _, health_check_def := range check_value.Checks {
-					// Marshal back to a map
-					event := beat.Event{
-						Timestamp: time.Now(),
-						Fields: common.MapStr{
-							"type": "service", // REFACTOR
-							"ok": catalog_check[0].ServiceAddress,
-							"node": check_value.Node.Node,
-							"Datacenter": check_value.Node.Datacenter,
-							"AgentAddress": check_value.Node.Address,
-							"Port": check_value.Service.Port,
-							"Service": check_value.Service.Service,
-							"CheckID": health_check_def.CheckID,
-							"CheckName": health_check_def.Name,
-							"Status": health_check_def.Status,
-							"Output": health_check_def.Output,
-							"ServiceID": health_check_def.ServiceID,
-							"ServiceName": health_check_def.ServiceName,
-							"ServiceTags": strings.Join(health_check_def.ServiceTags, ","),
-						},
-					}
-					events = append(events, event)
+				fmt.Println("Checked value is ", check_value)
+				fmt.Println(check_value.ServiceAddress)
+				fmt.Println(check_value.Checks)
+				event := beat.Event{
+					Timestamp: time.Now(),
+					Fields: common.MapStr{
+						"node":         check_value.Node,
+						"Datacenter":   check_value.Datacenter,
+						"AgentAddress": check_value.Address,
+						// "CheckID":        health_check_def.CheckID,
+						// "CheckName":      health_check_def.Name,
+						// "Status":         health_check_def.Status,
+						// "Output":         health_check_def.Output,
+						"ServiceID":      check_value.ServiceID,
+						"ServicePort":    check_value.ServicePort,
+						"ServiceAddress": check_value.ServiceAddress,
+						"ServiceName":    check_value.ServiceName,
+						"ServiceTags":    strings.Join(check_value.ServiceTags, ","),
+					},
 				}
+				events = append(events, event)
 			}
-		}
 
-		// Testing node checks
-		//info, _ := agent.Self()
-		//name := info["Config"]["NodeName"].(string)
-		//checks, meta, _ := health.Node(name, nil)
-		// fmt.Println("Node checks: ", checks[0].Node)
-		// fmt.Println("Name: ", checks[0].Name)
-		// fmt.Println("Status check: ", checks[0].Status)
-		// fmt.Println("Output: ", checks[0].Output)
-		//logp.Info(string(checks))
-		//logp.Info(string(meta.LastIndex))
-		// Parse checks
+		}
 		bt.client.PublishAll(events)
 		logp.Info("Events sent")
 	}
