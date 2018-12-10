@@ -38,7 +38,7 @@ install:
   - true
 
 script:
-  - make $TARGETS
+  - make
 
 deploy:
   provider: releases
