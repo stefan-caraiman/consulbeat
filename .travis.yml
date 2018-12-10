@@ -41,8 +41,7 @@ script:
   - go get
   - make
   - export REPO=stefanccaraiman/consulbeat
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
-  ; fi`
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH; fi`
   - echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
   - docker build --pull --force-rm -t $REPO:$TAG .
   - docker push $REPO:$TAG
