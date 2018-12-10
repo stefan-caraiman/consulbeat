@@ -1,5 +1,7 @@
 # Consulbeat
 
+[![Build Status](https://travis-ci.org/stefan-caraiman/consulbeat.svg?branch=master)](https://travis-ci.org/stefan-caraiman/consulbeat)
+
 Welcome to Consulbeat.
 
 Ensure that this folder is at the following location:
