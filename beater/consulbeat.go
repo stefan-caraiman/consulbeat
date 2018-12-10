@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/consul/api"
+	consulApi "github.com/hashicorp/consul/api"
 
 	"github.com/elastic/beats/libbeat/beat"
 	"github.com/elastic/beats/libbeat/common"
@@ -46,7 +46,7 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 	}
 
 	// Initialize Consul client
-	consulClient, err := api.NewClient(api.DefaultConfig())
+	consulClient, err := consulApi.NewClient(consulApi.DefaultConfig())
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,6 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 
 		var events = []beat.Event{}
 		for service, _ := range services {
-			//catalog_check, meta, err := health.Service(service, "", false, nil)
 			checks, meta, err := catalog.Service(service, "", nil)
 			if err != nil {
 				panic(err)
@@ -104,7 +103,7 @@ func (bt *Consulbeat) Run(b *beat.Beat) error {
 							"check.name":      check.Name,
 							"check.status":    check.Status,
 							"check.output":    check.Output,
-							"service.name":      check.ServiceName,
+							"service.name":    check.ServiceName,
 							"service.tags":    strings.Join(check.ServiceTags, ","),
 							"service.id":      service_check.ServiceID,
 							"service.port":    service_check.ServicePort,
